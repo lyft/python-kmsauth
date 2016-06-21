@@ -4,12 +4,14 @@ import json
 import datetime
 import base64
 import os
+import sys
 
 import kmsauth.services
 from kmsauth.utils import lru
 
 TOKEN_SKEW = 3
 TIME_FORMAT = "%Y%m%dT%H%M%SZ"
+PY2 = sys.version[0] == '2'
 
 
 class KMSTokenValidator(object):
@@ -133,8 +135,12 @@ class KMSTokenValidator(object):
                 version < self.minimum_token_version):
             raise TokenValidationError('Unacceptable token version.')
         try:
+            if PY2:
+                token_bytes = bytes(token)
+            else:
+                token_bytes = bytes(token, 'utf8')
             token_key = '{0}{1}{2}{3}'.format(
-                hashlib.sha256(token.encode('utf-8')).hexdigest(),
+                hashlib.sha256(token_bytes).hexdigest(),
                 _from,
                 to,
                 user_type
@@ -385,7 +391,11 @@ class KMSTokenGenerator(object):
                 Plaintext=payload,
                 EncryptionContext=self.auth_context
             )['CiphertextBlob']
-            token = base64.b64encode(token.encode('utf-8'))
+            if PY2:
+                token_bytes = bytes(token)
+            else:
+                token_bytes = bytes(token, 'utf8')
+            token = base64.b64encode(token_bytes)
         except Exception:
             logging.exception('Failed to create auth token.')
             raise TokenGenerationError()
