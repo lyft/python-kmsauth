@@ -8,4 +8,4 @@ test_lint:
 	set -o pipefail; flake8 | sed "s#^\./##" > build/flake8.txt || (cat build/flake8.txt && exit 1)
 
 test_unit:
-	nosetests tests/unit
+	nosetests --with-coverage tests/unit

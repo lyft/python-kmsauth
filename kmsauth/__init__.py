@@ -49,13 +49,15 @@ class KMSTokenValidator(object):
         self.auth_key = auth_key
         self.user_auth_key = user_auth_key
         self.region = region
+        if scoped_auth_keys is None:
+            self.scoped_auth_keys = {}
+        else:
+            self.scoped_auth_keys = scoped_auth_keys
+        self.minimum_token_version = minimum_token_version
+        self.maximum_token_version = maximum_token_version
+        self.auth_token_max_lifetime = auth_token_max_lifetime
         self.aws_creds = aws_creds
         if aws_creds:
-            self.kms_client = kmsauth.services.get_boto_client(
-                'kms',
-                region=self.region
-            )
-        else:
             self.kms_client = kmsauth.services.get_boto_client(
                 'kms',
                 region=self.region,
@@ -63,10 +65,11 @@ class KMSTokenValidator(object):
                 aws_secret_access_key=self.aws_creds['SecretAccessKey'],
                 aws_session_token=self.aws_creds['SessionToken']
             )
-        if scoped_auth_keys is None:
-            self.scoped_auth_keys = {}
         else:
-            self.scoped_auth_keys = scoped_auth_keys
+            self.kms_client = kmsauth.services.get_boto_client(
+                'kms',
+                region=self.region
+            )
         self.TOKENS = lru.LRUCache(4096)
         self.KEY_METADATA = {}
         self._validate_generator()
@@ -80,7 +83,7 @@ class KMSTokenValidator(object):
             raise ConfigurationError(
                 'Invalid maximum_token_version provided.'
             )
-        if self.minimum_token_version > self.minimum_token_version:
+        if self.minimum_token_version > self.maximum_token_version:
             raise ConfigurationError(
                 'minimum_token_version can not be greater than'
                 ' self.minimum_token_version'
@@ -257,19 +260,20 @@ class KMSTokenGenerator(object):
         self.token_cache_file = token_cache_file
         self.token_lifetime = token_lifetime
         self.region = region
+        self.token_version = token_version
         self.aws_creds = aws_creds
         if aws_creds:
-            self.kms_client = kmsauth.services.get_boto_client(
-                'kms',
-                region=self.region
-            )
-        else:
             self.kms_client = kmsauth.services.get_boto_client(
                 'kms',
                 region=self.region,
                 aws_access_key_id=self.aws_creds['AccessKeyId'],
                 aws_secret_access_key=self.aws_creds['SecretAccessKey'],
                 aws_session_token=self.aws_creds['SessionToken']
+            )
+        else:
+            self.kms_client = kmsauth.services.get_boto_client(
+                'kms',
+                region=self.region
             )
         self._validate_generator()
 

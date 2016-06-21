@@ -71,7 +71,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         )
         validator.kms_client = MagicMock()
         validator.KEY_METADATA = {}
-        validator.kms_client.return_value = {
+        validator.kms_client.describe_key.return_value = {
             'KeyMetadata': {'Arn': 'mocked:arn'}
         }
         self.assertEqual(
@@ -94,7 +94,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             'mocked:arn'
         )
 
-    def test__valid_service_auth_key(self, gka_mock):
+    def test__valid_service_auth_key(self):
         validator = kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             None,
@@ -115,7 +115,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         # Test SCOPED_AUTH_KEYS arn checking. There's two items in the side
         # effect because get_key_arn will be called twice: once for AUTH_KEY
         # check (which will fail) and another for the SCOPED_AUTH_KEYS check.
-        validator._get_key_arn.side_effect.side_effect = [
+        validator._get_key_arn.side_effect = [
             'auth::key',
             'test::arn'
         ]
@@ -126,7 +126,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         validator._get_key_arn.side_effect = ['auth::key', 'test::arn']
         self.assertFalse(validator._valid_service_auth_key('bad::arn'))
 
-    def test__valid_user_auth_key(self, gka_mock):
+    def test__valid_user_auth_key(self):
         validator = kmsauth.KMSTokenValidator(
             None,
             'alias/authnz-user-unittest',
@@ -134,7 +134,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         )
         validator._get_key_arn = MagicMock()
         # Test USER_AUTH_KEY arn checking
-        validator._get_key_arn.return_value = ['test::arn']
+        validator._get_key_arn.return_value = 'test::arn'
         self.assertTrue(validator._valid_user_auth_key('test::arn'))
         self.assertFalse(validator._valid_service_auth_key('bad::arn'))
 
@@ -237,7 +237,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             'KeyId': 'mocked'
         }
         with self.assertRaisesRegexp(
-                kmsauth.okenValidationError,
+                kmsauth.TokenValidationError,
                 'Authentication error. Missing validity.'):
             validator.decrypt_token(
                 2,
@@ -274,6 +274,15 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 'ZW5jcnlwdGVk'
             )
         # Token too old
+        validator = kmsauth.KMSTokenValidator(
+            'alias/authnz-unittest',
+            'alias/authnz-user-unittest',
+            'us-east-1'
+        )
+        validator._get_key_arn = MagicMock(return_value='mocked')
+        validator._get_key_alias_from_cache = MagicMock(
+            return_value='authnz-testing'
+        )
         now = datetime.datetime.utcnow()
         _not_before = now - datetime.timedelta(minutes=60)
         not_before = _not_before.strftime(time_format)
@@ -283,13 +292,14 @@ class KMSTokenValidatorTest(unittest.TestCase):
             'not_before': not_before,
             'not_after': not_after
         })
+        validator.kms_client.decrypt = MagicMock()
         validator.kms_client.decrypt.return_value = {
             'Plaintext': payload,
             'KeyId': 'mocked'
         }
         with self.assertRaisesRegexp(
                 kmsauth.TokenValidationError,
-                'Authentication error. Invalid time validity for token'):
+                'Authentication error. Invalid time validity for token.'):
             validator.decrypt_token(
                 2,
                 'service',
@@ -403,11 +413,11 @@ class KMSTokenGeneratorTest(unittest.TestCase):
         )
         boto_mock.return_value = kms_mock
         client = kmsauth.KMSTokenGenerator(
-            'http://localhost/',
             'alias/authnz-testing',
             {'from': 'kmsauth-unittest',
              'to': 'test',
              'user_type': 'service'},
+            'us-east-1'
         )
         token = client.get_token()
         self.assertEqual(token, base64.b64encode('encrypted'))
