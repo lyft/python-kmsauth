@@ -420,4 +420,4 @@ class KMSTokenGeneratorTest(unittest.TestCase):
             'us-east-1'
         )
         token = client.get_token()
-        self.assertEqual(token, base64.b64encode('encrypted'))
+        self.assertEqual(token, base64.b64encode(b'encrypted'))
