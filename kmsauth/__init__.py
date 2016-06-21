@@ -91,12 +91,12 @@ class KMSTokenValidator(object):
                 ' self.minimum_token_version'
             )
 
-    def _get_key_arn(self, key_alias):
-        if key_alias not in self.KEY_METADATA:
-            self.KEY_METADATA[key_alias] = self.kms_client.describe_key(
-                KeyId='alias/{0}'.format(key_alias)
+    def _get_key_arn(self, key):
+        if key not in self.KEY_METADATA:
+            self.KEY_METADATA[key] = self.kms_client.describe_key(
+                KeyId='{0}'.format(key)
             )
-        return self.KEY_METADATA[key_alias]['KeyMetadata']['Arn']
+        return self.KEY_METADATA[key]['KeyMetadata']['Arn']
 
     def _get_key_alias_from_cache(self, key_arn):
         '''
