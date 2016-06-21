@@ -385,7 +385,7 @@ class KMSTokenGenerator(object):
                 Plaintext=payload,
                 EncryptionContext=self.auth_context
             )['CiphertextBlob']
-            token = base64.encodestring(bytes(token))
+            token = base64.b64encode(bytes(token))
         except Exception:
             logging.exception('Failed to create auth token.')
             raise TokenGenerationError()
