@@ -134,7 +134,7 @@ class KMSTokenValidator(object):
             raise TokenValidationError('Unacceptable token version.')
         try:
             token_key = '{0}{1}{2}{3}'.format(
-                hashlib.sha256(token).hexdigest(),
+                hashlib.sha256(token.encode('utf-8')).hexdigest(),
                 _from,
                 to,
                 user_type
@@ -385,7 +385,7 @@ class KMSTokenGenerator(object):
                 Plaintext=payload,
                 EncryptionContext=self.auth_context
             )['CiphertextBlob']
-            token = base64.b64encode(token)
+            token = base64.b64encode(token.encode('utf-8'))
         except Exception:
             logging.exception('Failed to create auth token.')
             raise TokenGenerationError()
