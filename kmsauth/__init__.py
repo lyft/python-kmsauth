@@ -22,6 +22,7 @@ class KMSTokenValidator(object):
             self,
             auth_key,
             user_auth_key,
+            to_auth_context,
             region,
             scoped_auth_keys=None,
             minimum_token_version=1,
@@ -36,8 +37,8 @@ class KMSTokenValidator(object):
                 authentication. Required.
             user_auth_key: The KMS key ARN or alias to use for user
                 authentication. Required.
-            auth_context: The KMS encryption context to use for authentication.
-                Required.
+            to_auth_context: The KMS encryption context to use for the to
+                context for authentication. Required.
             region: AWS region to connect to. Required.
             token_version: The version of the authentication token. Default: 2
             token_cache_file: he location to use for caching the auth token.
@@ -50,6 +51,7 @@ class KMSTokenValidator(object):
         """
         self.auth_key = auth_key
         self.user_auth_key = user_auth_key
+        self.to_auth_context = to_auth_context
         self.region = region
         if scoped_auth_keys is None:
             self.scoped_auth_keys = {}
@@ -127,10 +129,27 @@ class KMSTokenValidator(object):
             return True
         return False
 
-    def decrypt_token(self, version, user_type, _from, to, token):
+    def _parse_username(self, username):
+        username_arr = username.split('/')
+        if len(username_arr) == 3:
+            # V2 token format: version/service/myservice or version/user/myuser
+            version = int(username_arr[0])
+            user_type = username_arr[1]
+            _from = username_arr[2]
+        elif len(username_arr) == 1:
+            # Old format, specific to services: myservice
+            version = 1
+            _from = username_arr[0]
+            user_type = 'service'
+        else:
+            raise TokenValidationError('Unsupported username format.')
+        return version, user_type, _from
+
+    def decrypt_token(self, username, token):
         '''
         Decrypt a token.
         '''
+        version, user_type, _from = self._parse_username(username)
         if (version > self.maximum_token_version or
                 version < self.minimum_token_version):
             raise TokenValidationError('Unacceptable token version.')
@@ -142,7 +161,7 @@ class KMSTokenValidator(object):
             token_key = '{0}{1}{2}{3}'.format(
                 hashlib.sha256(token_bytes).hexdigest(),
                 _from,
-                to,
+                self.to_auth_context,
                 user_type
             )
         except Exception:
@@ -151,9 +170,7 @@ class KMSTokenValidator(object):
             try:
                 token = base64.b64decode(token)
                 context = {
-                    # This key is sent to us.
-                    'to': to,
-                    # From a service.
+                    'to': self.to_auth_context,
                     'from': _from
                 }
                 if version > 1:

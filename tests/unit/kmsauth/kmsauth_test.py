@@ -20,6 +20,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             kmsauth.KMSTokenValidator(
                 'alias/authnz-unittest',
                 None,
+                'kmsauth-unittest',
                 'us-east-1',
                 # 0 is an invalid token version
                 minimum_token_version=0
@@ -28,6 +29,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             kmsauth.KMSTokenValidator(
                 'alias/authnz-unittest',
                 None,
+                'kmsauth-unittest',
                 'us-east-1',
                 # 3 is an invalid token version
                 minimum_token_version=3
@@ -36,6 +38,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             kmsauth.KMSTokenValidator(
                 'alias/authnz-unittest',
                 None,
+                'kmsauth-unittest',
                 'us-east-1',
                 # 0 is an invalid token version
                 maximum_token_version=0
@@ -44,6 +47,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             kmsauth.KMSTokenValidator(
                 'alias/authnz-unittest',
                 None,
+                'kmsauth-unittest',
                 'us-east-1',
                 # 3 is an invalid token version
                 maximum_token_version=3
@@ -52,6 +56,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             kmsauth.KMSTokenValidator(
                 'alias/authnz-unittest',
                 None,
+                'kmsauth-unittest',
                 'us-east-1',
                 # minimum can't be greater than maximum
                 minimum_token_version=2,
@@ -60,6 +65,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         assert(kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             None,
+            'kmsauth-unittest',
             'us-east-1'
         ))
 
@@ -67,6 +73,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         validator = kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             None,
+            'kmsauth-unittest',
             'us-east-1'
         )
         validator.kms_client = MagicMock()
@@ -83,6 +90,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         validator = kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             None,
+            'kmsauth-unittest',
             'us-east-1'
         )
         validator.kms_client = MagicMock()
@@ -98,6 +106,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         validator = kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             None,
+            'kmsauth-unittest',
             'us-east-1'
         )
         validator._get_key_arn = MagicMock()
@@ -108,6 +117,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         validator = kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             None,
+            'kmsauth-unittest',
             'us-east-1',
             scoped_auth_keys={'test-key': 'test-account'}
         )
@@ -130,6 +140,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         validator = kmsauth.KMSTokenValidator(
             None,
             'alias/authnz-user-unittest',
+            'kmsauth-unittest',
             'us-east-1'
         )
         validator._get_key_arn = MagicMock()
@@ -138,10 +149,31 @@ class KMSTokenValidatorTest(unittest.TestCase):
         self.assertTrue(validator._valid_user_auth_key('test::arn'))
         self.assertFalse(validator._valid_service_auth_key('bad::arn'))
 
+    def test__parse_username(self):
+        validator = kmsauth.KMSTokenValidator(
+            None,
+            'alias/authnz-user-unittest',
+            'kmsauth-unittest',
+            'us-east-1'
+        )
+        self.assertEqual(
+            validator._parse_username('kmsauth-unittest'),
+            (1, 'service', 'kmsauth-unittest')
+        )
+        self.assertEqual(
+            validator._parse_username('2/service/kmsauth-unittest'),
+            (2, 'service', 'kmsauth-unittest')
+        )
+        with self.assertRaisesRegexp(
+                kmsauth.TokenValidationError,
+                'Unsupported username format.'):
+            validator._parse_username('3/service/kmsauth-unittest/extratoken')
+
     def test_decrypt_token(self):
         validator = kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             'alias/authnz-user-unittest',
+            'kmsauth-unittest',
             'us-east-1'
         )
         validator._get_key_arn = MagicMock(return_value='mocked')
@@ -166,10 +198,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         # values using v1 token.
         self.assertEqual(
             validator.decrypt_token(
-                1,
-                'service',
                 'kmsauth-unittest',
-                'to-unittest',
                 'ZW5jcnlwdGVk'
             ),
             {
@@ -182,10 +211,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         validator.TOKENS = lru.LRUCache(4096)
         self.assertEqual(
             validator.decrypt_token(
-                2,
-                'user',
-                'testuser',
-                'to-unittest',
+                '2/user/testuser',
                 'ZW5jcnlwdGVk'
             ),
             {
@@ -199,10 +225,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 kmsauth.TokenValidationError,
                 'Unacceptable token version.'):
             validator.decrypt_token(
-                3,
-                'user',
-                'testuser',
-                'to-unittest',
+                '3/user/testuser',
                 'ZW5jcnlwdGVk'
             )
         # Ensure we check user types
@@ -210,10 +233,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 kmsauth.TokenValidationError,
                 'Authentication error. Unsupported user_type.'):
             validator.decrypt_token(
-                2,
-                'unsupported',
-                'testuser',
-                'to-unittest',
+                '2/unsupported/testuser',
                 'ZW5jcnlwdGVk'
             )
         # Missing KeyId, will cause an exception to be thrown
@@ -224,10 +244,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 kmsauth.TokenValidationError,
                 'Authentication error. General error.'):
             validator.decrypt_token(
-                2,
-                'service',
-                'kmsauth-unittest',
-                'to-unittest',
+                '2/service/kmsauth-unittest',
                 'ZW5jcnlwdGVk'
             )
         # Payload missing not_before/not_after
@@ -240,10 +257,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 kmsauth.TokenValidationError,
                 'Authentication error. Missing validity.'):
             validator.decrypt_token(
-                2,
-                'service',
-                'kmsauth-unittest',
-                'to-unittest',
+                '2/service/kmsauth-unittest',
                 'ZW5jcnlwdGVk'
             )
         # lifetime of 0 will make every token invalid. testing for proper delta
@@ -251,6 +265,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
         validator = kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             'alias/authnz-user-unittest',
+            'kmsauth-unittest',
             'us-east-1',
             auth_token_max_lifetime=0
         )
@@ -267,16 +282,14 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 kmsauth.TokenValidationError,
                 'Authentication error. Token lifetime exceeded.'):
             validator.decrypt_token(
-                2,
-                'service',
-                'kmsauth-unittest',
-                'to-unittest',
+                '2/service/kmsauth-unittest',
                 'ZW5jcnlwdGVk'
             )
         # Token too old
         validator = kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             'alias/authnz-user-unittest',
+            'kmsauth-unittest',
             'us-east-1'
         )
         validator._get_key_arn = MagicMock(return_value='mocked')
@@ -301,10 +314,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 kmsauth.TokenValidationError,
                 'Authentication error. Invalid time validity for token.'):
             validator.decrypt_token(
-                2,
-                'service',
-                'kmsauth-unittest',
-                'to-unittest',
+                '2/service/kmsauth-unittest',
                 'ZW5jcnlwdGVk'
             )
         # Token too young
@@ -325,10 +335,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 kmsauth.TokenValidationError,
                 'Authentication error. Invalid time validity for token'):
             validator.decrypt_token(
-                2,
-                'service',
-                'kmsauth-unittest',
-                'to-unittest',
+                '2/service/kmsauth-unittest',
                 'ZW5jcnlwdGVk'
             )
 
