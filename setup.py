@@ -11,9 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
-VERSION = "0.1.3"
+VERSION = "0.1.4"
 
 requirements = [
     # Boto3 is the Amazon Web Services (AWS) Software Development Kit (SDK)
@@ -28,6 +28,7 @@ setup(
     name="kmsauth",
     version=VERSION,
     install_requires=requirements,
+    packages=find_packages(exclude=["test*"]),
     author="Ryan Lane",
     author_email="rlane@lyft.com",
     description=("A python library for reusing KMS for your own authentication"
