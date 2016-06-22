@@ -30,8 +30,8 @@ setup(
     install_requires=requirements,
     author="Ryan Lane",
     author_email="rlane@lyft.com",
-    description=("A library for generating and validating KMS authentication"
-                 "tokens"),
+    description=("A python library for reusing KMS for your own authentication"
+                 " and authorization."),
     license="apache2",
     url="https://github.com/lyft/python-kmsauth"
 )
