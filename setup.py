@@ -13,7 +13,7 @@
 
 from setuptools import setup
 
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 requirements = [
     # Boto3 is the Amazon Web Services (AWS) Software Development Kit (SDK)
