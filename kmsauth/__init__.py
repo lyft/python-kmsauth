@@ -28,7 +28,8 @@ class KMSTokenValidator(object):
             minimum_token_version=1,
             maximum_token_version=2,
             auth_token_max_lifetime=60,
-            aws_creds=None
+            aws_creds=None,
+            extra_context=None
             ):
         """Create a KMSTokenValidator object.
 
@@ -74,11 +75,20 @@ class KMSTokenValidator(object):
                 'kms',
                 region=self.region
             )
+        if extra_context is None:
+            self.extra_context = {}
+        else:
+            self.extra_context = extra_context
         self.TOKENS = lru.LRUCache(4096)
         self.KEY_METADATA = {}
-        self._validate_generator()
+        self._validate_validator()
 
-    def _validate_generator(self):
+    def _validate_validator(self):
+        for key in ['from', 'to', 'user_type']:
+            if key in self.extra_context:
+                raise ConfigurationError(
+                    'from, to, and user_type not allowed in extra_context.'
+                )
         if self.minimum_token_version < 1 or self.minimum_token_version > 2:
             raise ConfigurationError(
                 'Invalid minimum_token_version provided.'
@@ -175,6 +185,7 @@ class KMSTokenValidator(object):
                 }
                 if version > 1:
                     context['user_type'] = user_type
+                context.update(self.extra_context)
                 data = self.kms_client.decrypt(
                     CiphertextBlob=token,
                     EncryptionContext=context
