@@ -155,6 +155,15 @@ class KMSTokenValidator(object):
             raise TokenValidationError('Unsupported username format.')
         return version, user_type, _from
 
+    def get_username_field(self, username, field):
+        version, user_type, _from = self._parse_username(username)
+        if field == 'from':
+            return _from
+        elif field == 'user_type':
+            return user_type
+        elif field == 'version':
+            return version
+
     def decrypt_token(self, username, token):
         '''
         Decrypt a token.
