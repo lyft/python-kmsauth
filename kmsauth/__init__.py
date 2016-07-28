@@ -163,6 +163,7 @@ class KMSTokenValidator(object):
             return user_type
         elif field == 'version':
             return version
+        return None
 
     def decrypt_token(self, username, token):
         '''
