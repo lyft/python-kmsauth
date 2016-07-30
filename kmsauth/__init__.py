@@ -5,6 +5,7 @@ import datetime
 import base64
 import os
 import sys
+import copy
 
 import kmsauth.services
 from kmsauth.utils import lru
@@ -28,7 +29,8 @@ class KMSTokenValidator(object):
             minimum_token_version=1,
             maximum_token_version=2,
             auth_token_max_lifetime=60,
-            aws_creds=None
+            aws_creds=None,
+            extra_context=None
             ):
         """Create a KMSTokenValidator object.
 
@@ -74,11 +76,20 @@ class KMSTokenValidator(object):
                 'kms',
                 region=self.region
             )
+        if extra_context is None:
+            self.extra_context = {}
+        else:
+            self.extra_context = extra_context
         self.TOKENS = lru.LRUCache(4096)
         self.KEY_METADATA = {}
-        self._validate_generator()
+        self._validate()
 
-    def _validate_generator(self):
+    def _validate(self):
+        for key in ['from', 'to', 'user_type']:
+            if key in self.extra_context:
+                logging.warning(
+                    '{0} in extra_context will be ignored.'.format(key)
+                )
         if self.minimum_token_version < 1 or self.minimum_token_version > 2:
             raise ConfigurationError(
                 'Invalid minimum_token_version provided.'
@@ -145,6 +156,16 @@ class KMSTokenValidator(object):
             raise TokenValidationError('Unsupported username format.')
         return version, user_type, _from
 
+    def extract_username_field(self, username, field):
+        version, user_type, _from = self._parse_username(username)
+        if field == 'from':
+            return _from
+        elif field == 'user_type':
+            return user_type
+        elif field == 'version':
+            return version
+        return None
+
     def decrypt_token(self, username, token):
         '''
         Decrypt a token.
@@ -169,10 +190,11 @@ class KMSTokenValidator(object):
         if token_key not in self.TOKENS:
             try:
                 token = base64.b64decode(token)
-                context = {
-                    'to': self.to_auth_context,
-                    'from': _from
-                }
+                # Ensure normal context fields override whatever is in
+                # extra_context.
+                context = copy.deepcopy(self.extra_context)
+                context['to'] = self.to_auth_context
+                context['from'] = _from
                 if version > 1:
                     context['user_type'] = user_type
                 data = self.kms_client.decrypt(
@@ -298,9 +320,9 @@ class KMSTokenGenerator(object):
                 'kms',
                 region=self.region
             )
-        self._validate_generator()
+        self._validate()
 
-    def _validate_generator(self):
+    def _validate(self):
         for key in ['from', 'to']:
             if key not in self.auth_context:
                 raise ConfigurationError(

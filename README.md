@@ -82,6 +82,28 @@ validator = kmsauth.KMSTokenValidator(
 validator.decrypt_token(username, token)
 ```
 
+If you're extending the common KMS auth token context, you can pass extra
+context into the validator:
+
+```python
+import kmsauth
+validator = kmsauth.KMSTokenValidator(
+    # KMS key to use for service authentication
+    'alias/authnz-production',
+    # KMS key to use for user authentication
+    'alias/authnz-users-production',
+    # The context of this validation (the "to" context to validate against)
+    'confidant-production',
+    # Find the KMS keys in this region
+    'us-east-1',
+    extra_context={'action': 'create_resource'}
+)
+validator.decrypt_token(username, token)
+```
+
+Note: 'to', 'from', and 'user_type' keys are not allowed to be set in
+extra_context.
+
 ## Reporting security vulnerabilities
 
 If you've found a vulnerability or a potential vulnerability in kmsauth
