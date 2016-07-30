@@ -62,33 +62,6 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 minimum_token_version=2,
                 maximum_token_version=1
             )
-        with self.assertRaises(kmsauth.ConfigurationError):
-            kmsauth.KMSTokenValidator(
-                'alias/authnz-unittest',
-                None,
-                'kmsauth-unittest',
-                'us-east-1',
-                # extra_context not allowed to have 'to'
-                extra_context={'to': 'me'}
-            )
-        with self.assertRaises(kmsauth.ConfigurationError):
-            kmsauth.KMSTokenValidator(
-                'alias/authnz-unittest',
-                None,
-                'kmsauth-unittest',
-                'us-east-1',
-                # extra_context not allowed to have 'from'
-                extra_context={'from': 'me'}
-            )
-        with self.assertRaises(kmsauth.ConfigurationError):
-            kmsauth.KMSTokenValidator(
-                'alias/authnz-unittest',
-                None,
-                'kmsauth-unittest',
-                'us-east-1',
-                # extra_context not allowed to have 'from'
-                extra_context={'user_type': 'user'}
-            )
         assert(kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
             None,
