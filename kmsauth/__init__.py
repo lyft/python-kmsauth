@@ -81,9 +81,9 @@ class KMSTokenValidator(object):
             self.extra_context = extra_context
         self.TOKENS = lru.LRUCache(4096)
         self.KEY_METADATA = {}
-        self._validate_validator()
+        self._validate()
 
-    def _validate_validator(self):
+    def _validate(self):
         for key in ['from', 'to', 'user_type']:
             if key in self.extra_context:
                 raise ConfigurationError(
@@ -319,9 +319,9 @@ class KMSTokenGenerator(object):
                 'kms',
                 region=self.region
             )
-        self._validate_generator()
+        self._validate()
 
-    def _validate_generator(self):
+    def _validate(self):
         for key in ['from', 'to']:
             if key not in self.auth_context:
                 raise ConfigurationError(
