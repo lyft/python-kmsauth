@@ -5,6 +5,7 @@ import datetime
 import base64
 import os
 import sys
+import copy
 
 import kmsauth.services
 from kmsauth.utils import lru
@@ -191,7 +192,7 @@ class KMSTokenValidator(object):
                 token = base64.b64decode(token)
                 # Ensure normal context fields override whatever is in
                 # extra_context.
-                context = self.extra_context
+                context = copy.deepcopy(self.extra_context)
                 context['to'] = self.to_auth_context
                 context['from'] = _from
                 if version > 1:
