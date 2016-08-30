@@ -122,7 +122,7 @@ class KMSTokenValidator(object):
         )
 
     def _get_key_arn(self, key):
-        if key[:12] == 'arn:aws:kms:':
+        if key.startswith('arn:aws:kms:'):
             self.KEY_METADATA[key] = {
                 'KeyMetadata': {'Arn': key}
             }
