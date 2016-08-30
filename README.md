@@ -70,10 +70,10 @@ token = generator.get_token()
 ```python
 import kmsauth
 validator = kmsauth.KMSTokenValidator(
-    # KMS key to use for service authentication
-    'alias/authnz-production',
-    # KMS key to use for user authentication
-    'alias/authnz-users-production',
+    # KMS keys to use for service authentication
+    ['alias/authnz-production'],
+    # KMS keys to use for user authentication
+    ['alias/authnz-users-production', '6655d2a8-0606-4727-a1f6-f5b6a6754377'],
     # The context of this validation (the "to" context to validate against)
     'confidant-production',
     # Find the KMS keys in this region
@@ -88,10 +88,10 @@ context into the validator:
 ```python
 import kmsauth
 validator = kmsauth.KMSTokenValidator(
-    # KMS key to use for service authentication
-    'alias/authnz-production',
-    # KMS key to use for user authentication
-    'alias/authnz-users-production',
+    # KMS keys to use for service authentication
+    ['alias/authnz-production'],
+    # KMS keys to use for user authentication
+    ['alias/authnz-users-production', '6655d2a8-0606-4727-a1f6-f5b6a6754377'],
     # The context of this validation (the "to" context to validate against)
     'confidant-production',
     # Find the KMS keys in this region
