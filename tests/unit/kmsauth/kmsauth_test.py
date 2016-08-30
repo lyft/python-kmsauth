@@ -18,7 +18,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
     def test_validate_config(self):
         with self.assertRaises(kmsauth.ConfigurationError):
             kmsauth.KMSTokenValidator(
-                'alias/authnz-unittest',
+                ['alias/authnz-unittest'],
                 None,
                 'kmsauth-unittest',
                 'us-east-1',
@@ -27,7 +27,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             )
         with self.assertRaises(kmsauth.ConfigurationError):
             kmsauth.KMSTokenValidator(
-                'alias/authnz-unittest',
+                ['alias/authnz-unittest'],
                 None,
                 'kmsauth-unittest',
                 'us-east-1',
@@ -36,7 +36,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             )
         with self.assertRaises(kmsauth.ConfigurationError):
             kmsauth.KMSTokenValidator(
-                'alias/authnz-unittest',
+                ['alias/authnz-unittest'],
                 None,
                 'kmsauth-unittest',
                 'us-east-1',
@@ -45,7 +45,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             )
         with self.assertRaises(kmsauth.ConfigurationError):
             kmsauth.KMSTokenValidator(
-                'alias/authnz-unittest',
+                ['alias/authnz-unittest'],
                 None,
                 'kmsauth-unittest',
                 'us-east-1',
@@ -54,7 +54,7 @@ class KMSTokenValidatorTest(unittest.TestCase):
             )
         with self.assertRaises(kmsauth.ConfigurationError):
             kmsauth.KMSTokenValidator(
-                'alias/authnz-unittest',
+                ['alias/authnz-unittest'],
                 None,
                 'kmsauth-unittest',
                 'us-east-1',
@@ -62,8 +62,22 @@ class KMSTokenValidatorTest(unittest.TestCase):
                 minimum_token_version=2,
                 maximum_token_version=1
             )
+        with self.assertRaises(kmsauth.ConfigurationError):
+            kmsauth.KMSTokenValidator(
+                # kms key must be string, list, or None
+                1234,
+                None,
+                'kmsauth-unittest',
+                'us-east-1',
+            )
         assert(kmsauth.KMSTokenValidator(
             'alias/authnz-unittest',
+            None,
+            'kmsauth-unittest',
+            'us-east-1'
+        ))
+        assert(kmsauth.KMSTokenValidator(
+            ['alias/authnz-unittest'],
             None,
             'kmsauth-unittest',
             'us-east-1'

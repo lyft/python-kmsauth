@@ -7,6 +7,8 @@ import os
 import sys
 import copy
 
+from botocore.vendored import six
+
 import kmsauth.services
 from kmsauth.utils import lru
 
@@ -35,9 +37,9 @@ class KMSTokenValidator(object):
         """Create a KMSTokenValidator object.
 
         Args:
-            auth_key: The KMS key ARN or alias to use for service
+            auth_key: A list of KMS key ARNs or aliases to use for service
                 authentication. Required.
-            user_auth_key: The KMS key ARN or alias to use for user
+            user_auth_key: A list of KMS key ARNs or aliases to use for user
                 authentication. Required.
             to_auth_context: The KMS encryption context to use for the to
                 context for authentication. Required.
@@ -103,6 +105,21 @@ class KMSTokenValidator(object):
                 'minimum_token_version can not be greater than'
                 ' self.minimum_token_version'
             )
+        self.auth_key = self._format_auth_key(self.auth_key)
+        self.user_auth_key = self._format_auth_key(self.user_auth_key)
+
+    def _format_auth_key(self, keys):
+        if isinstance(keys, six.string_types):
+            logging.debug(
+                'Passing auth key as string is deprecated, and will be removed'
+                ' in 1.0.0'
+            )
+            return [keys]
+        elif (keys is None or isinstance(keys, list)):
+            return keys
+        raise ConfigurationError(
+            'auth_key and user_auth_key must be a string, list, or None'
+        )
 
     def _get_key_arn(self, key):
         if key not in self.KEY_METADATA:
@@ -126,8 +143,9 @@ class KMSTokenValidator(object):
     def _valid_service_auth_key(self, key_arn):
         if self.auth_key is None:
             return False
-        if key_arn == self._get_key_arn(self.auth_key):
-            return True
+        for key in self.auth_key:
+            if key_arn == self._get_key_arn(key):
+                return True
         for key in self.scoped_auth_keys:
             if key_arn == self._get_key_arn(key):
                 return True
@@ -136,8 +154,9 @@ class KMSTokenValidator(object):
     def _valid_user_auth_key(self, key_arn):
         if self.user_auth_key is None:
             return False
-        if key_arn == self._get_key_arn(self.user_auth_key):
-            return True
+        for key in self.user_auth_key:
+            if key_arn == self._get_key_arn(key):
+                return True
         return False
 
     def _parse_username(self, username):
