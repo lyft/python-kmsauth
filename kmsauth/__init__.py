@@ -122,6 +122,10 @@ class KMSTokenValidator(object):
         )
 
     def _get_key_arn(self, key):
+        if key[:12] == 'arn:aws:kms:':
+            self.KEY_METADATA[key] = {
+                'KeyMetadata': {'Arn': key}
+            }
         if key not in self.KEY_METADATA:
             self.KEY_METADATA[key] = self.kms_client.describe_key(
                 KeyId='{0}'.format(key)
