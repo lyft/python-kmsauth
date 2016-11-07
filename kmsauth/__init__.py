@@ -8,6 +8,8 @@ import sys
 import copy
 
 from botocore.vendored import six
+from botocore.exceptions import (ConnectionError,
+                                 EndpointConnectionError)
 
 import kmsauth.services
 from kmsauth.utils import lru
@@ -248,6 +250,11 @@ class KMSTokenValidator(object):
                 ret = {'payload': payload, 'key_alias': key_alias}
             except TokenValidationError:
                 raise
+            except (ConnectionError, EndpointConnectionError):
+                logging.exception('Failure connecting to AWS endpoint.')
+                raise TokenValidationError(
+                    'Authentication error. Failure connecting to AWS endpoint.'
+                )
             # We don't care what exception is thrown. For paranoia's sake, fail
             # here.
             except Exception:
@@ -458,11 +465,19 @@ class KMSTokenGenerator(object):
             else:
                 token_bytes = bytes(token, 'utf8')
             token = base64.b64encode(token_bytes)
+        except (ConnectionError, EndpointConnectionError) as e:
+            logging.exception('Failure connecting to AWS: {}'.format(str(e)))
+            raise ServiceConnectionError()
         except Exception:
             logging.exception('Failed to create auth token.')
             raise TokenGenerationError()
         self._cache_token(token, not_after)
         return token
+
+
+class ServiceConnectionError(Exception):
+    """An exception raised when there was an AWS connection error."""
+    pass
 
 
 class ConfigurationError(Exception):
