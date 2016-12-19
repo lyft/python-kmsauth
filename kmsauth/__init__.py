@@ -34,7 +34,8 @@ class KMSTokenValidator(object):
             maximum_token_version=2,
             auth_token_max_lifetime=60,
             aws_creds=None,
-            extra_context=None
+            extra_context=None,
+            endpoint_url=None
             ):
         """Create a KMSTokenValidator object.
 
@@ -54,6 +55,8 @@ class KMSTokenValidator(object):
             aws_creds: A dict of AccessKeyId, SecretAccessKey, SessionToken.
                 Useful if you wish to pass in assumed role credentials or MFA
                 credentials. Default: None
+            endpoint_url: A URL to override the default endpoint used to access
+                the KMS service. Default: None
         """
         self.auth_key = auth_key
         self.user_auth_key = user_auth_key
@@ -73,12 +76,14 @@ class KMSTokenValidator(object):
                 region=self.region,
                 aws_access_key_id=self.aws_creds['AccessKeyId'],
                 aws_secret_access_key=self.aws_creds['SecretAccessKey'],
-                aws_session_token=self.aws_creds['SessionToken']
+                aws_session_token=self.aws_creds['SessionToken'],
+                endpoint_url=endpoint_url
             )
         else:
             self.kms_client = kmsauth.services.get_boto_client(
                 'kms',
-                region=self.region
+                region=self.region,
+                endpoint_url=endpoint_url
             )
         if extra_context is None:
             self.extra_context = {}
@@ -308,7 +313,8 @@ class KMSTokenGenerator(object):
             token_version=2,
             token_cache_file=None,
             token_lifetime=10,
-            aws_creds=None
+            aws_creds=None,
+            endpoint_url=None
             ):
         """Create a KMSTokenGenerator object.
 
@@ -326,6 +332,8 @@ class KMSTokenGenerator(object):
             aws_creds: A dict of AccessKeyId, SecretAccessKey, SessionToken.
                 Useful if you wish to pass in assumed role credentials or MFA
                 credentials. Default: None
+            endpoint_url: A URL to override the default endpoint used to access
+                the KMS service. Default: None
         """
         self.auth_key = auth_key
         if auth_context is None:
@@ -343,12 +351,14 @@ class KMSTokenGenerator(object):
                 region=self.region,
                 aws_access_key_id=self.aws_creds['AccessKeyId'],
                 aws_secret_access_key=self.aws_creds['SecretAccessKey'],
-                aws_session_token=self.aws_creds['SessionToken']
+                aws_session_token=self.aws_creds['SessionToken'],
+                endpoint_url=endpoint_url
             )
         else:
             self.kms_client = kmsauth.services.get_boto_client(
                 'kms',
-                region=self.region
+                region=self.region,
+                endpoint_url=endpoint_url
             )
         self._validate()
 
