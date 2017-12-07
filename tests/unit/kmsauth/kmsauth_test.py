@@ -2,6 +2,7 @@ import base64
 import datetime
 import json
 
+import six
 import unittest
 from mock import patch
 from mock import MagicMock
@@ -430,7 +431,7 @@ class KMSTokenGeneratorTest(unittest.TestCase):
     def test_get_token(self, boto_mock):
         kms_mock = MagicMock()
         kms_mock.encrypt = MagicMock(
-            return_value={'CiphertextBlob': 'encrypted'}
+            return_value={'CiphertextBlob': b'encrypted'}
         )
         boto_mock.return_value = kms_mock
         client = kmsauth.KMSTokenGenerator(
