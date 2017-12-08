@@ -4,7 +4,6 @@ import json
 import datetime
 import base64
 import os
-import sys
 import copy
 
 from botocore.vendored import six
