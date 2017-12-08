@@ -16,7 +16,6 @@ from kmsauth.utils import lru
 
 TOKEN_SKEW = 3
 TIME_FORMAT = "%Y%m%dT%H%M%SZ"
-PY2 = sys.version[0] == '2'
 
 
 def ensure_text(str_or_bytes, encoding='utf-8'):
