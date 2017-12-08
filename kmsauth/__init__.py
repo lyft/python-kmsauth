@@ -19,7 +19,7 @@ TIME_FORMAT = "%Y%m%dT%H%M%SZ"
 PY2 = sys.version[0] == '2'
 
 
-def ensure_str(str_or_bytes, encoding='utf-8'):
+def ensure_text(str_or_bytes, encoding='utf-8'):
     """Ensures an input is a string, decoding if it is bytes.
     """
     if not isinstance(str_or_bytes, six.text_type):
@@ -430,7 +430,7 @@ class KMSTokenGenerator(object):
                 os.makedirs(cachedir)
             with open(self.token_cache_file, 'w') as f:
                 json.dump({
-                    'token': ensure_str(token),
+                    'token': ensure_text(token),
                     'not_after': not_after,
                     'auth_context': self.auth_context
                 }, f)

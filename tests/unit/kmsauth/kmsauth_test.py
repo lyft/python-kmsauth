@@ -2,7 +2,6 @@ import base64
 import datetime
 import json
 
-import six
 import unittest
 from mock import patch
 from mock import MagicMock
