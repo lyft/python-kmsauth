@@ -4,7 +4,6 @@ import json
 import datetime
 import base64
 import os
-import sys
 import copy
 
 from botocore.vendored import six
@@ -16,7 +15,22 @@ from kmsauth.utils import lru
 
 TOKEN_SKEW = 3
 TIME_FORMAT = "%Y%m%dT%H%M%SZ"
-PY2 = sys.version[0] == '2'
+
+
+def ensure_text(str_or_bytes, encoding='utf-8'):
+    """Ensures an input is a string, decoding if it is bytes.
+    """
+    if not isinstance(str_or_bytes, six.text_type):
+        return str_or_bytes.decode(encoding)
+    return str_or_bytes
+
+
+def ensure_bytes(str_or_bytes, encoding='utf-8', errors='strict'):
+    """Ensures an input is bytes, encoding if it is a string.
+    """
+    if isinstance(str_or_bytes, six.text_type):
+        return str_or_bytes.encode(encoding, errors)
+    return str_or_bytes
 
 
 class KMSTokenValidator(object):
@@ -205,12 +219,8 @@ class KMSTokenValidator(object):
                 version < self.minimum_token_version):
             raise TokenValidationError('Unacceptable token version.')
         try:
-            if PY2:
-                token_bytes = bytes(token)
-            else:
-                token_bytes = bytes(token, 'utf8')
             token_key = '{0}{1}{2}{3}'.format(
-                hashlib.sha256(token_bytes).hexdigest(),
+                hashlib.sha256(ensure_bytes(token)).hexdigest(),
                 _from,
                 self.to_auth_context,
                 user_type
@@ -418,7 +428,7 @@ class KMSTokenGenerator(object):
                 os.makedirs(cachedir)
             with open(self.token_cache_file, 'w') as f:
                 json.dump({
-                    'token': token,
+                    'token': ensure_text(token),
                     'not_after': not_after,
                     'auth_context': self.auth_context
                 }, f)
@@ -470,11 +480,7 @@ class KMSTokenGenerator(object):
                 Plaintext=payload,
                 EncryptionContext=self.auth_context
             )['CiphertextBlob']
-            if PY2:
-                token_bytes = bytes(token)
-            else:
-                token_bytes = bytes(token, 'utf8')
-            token = base64.b64encode(token_bytes)
+            token = base64.b64encode(ensure_bytes(token))
         except (ConnectionError, EndpointConnectionError) as e:
             logging.exception('Failure connecting to AWS: {}'.format(str(e)))
             raise ServiceConnectionError()

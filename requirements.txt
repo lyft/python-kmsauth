@@ -12,7 +12,7 @@ flake8==2.3.0
 # Measures code coverage and emits coverage reports
 # Licence: BSD
 # Upstream url: https://pypi.python.org/pypi/coverage
-coverage==3.7.1
+coverage==4.4.2
 
 # tool to check your Python code against some of the style conventions
 # License: Expat License
@@ -22,7 +22,7 @@ pep8==1.5.7
 # nose makes testing easier
 # License: GNU Library or Lesser General Public License (LGPL)
 # Upstream url: http://readthedocs.org/docs/nose
-nose==1.3.3
+nose==1.3.7
 
 # Mocking and Patching Library for Testing
 # License: BSD
