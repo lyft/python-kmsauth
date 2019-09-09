@@ -49,7 +49,8 @@ class KMSTokenValidator(object):
             auth_token_max_lifetime=60,
             aws_creds=None,
             extra_context=None,
-            endpoint_url=None
+            endpoint_url=None,
+            token_cache_size=4096,
             ):
         """Create a KMSTokenValidator object.
 
@@ -61,11 +62,18 @@ class KMSTokenValidator(object):
             to_auth_context: The KMS encryption context to use for the to
                 context for authentication. Required.
             region: AWS region to connect to. Required.
-            token_version: The version of the authentication token. Default: 2
-            token_cache_file: he location to use for caching the auth token.
-                If set to empty string, no cache will be used. Default: None
-            token_lifetime: Lifetime of the authentication token generated.
-                Default: 10
+            scoped_auth_keys: A dict of KMS key to account mappings. These keys
+            are for the 'service' role to support multiple AWS accounts. If
+            services are scoped to accounts, kmsauth will ensure the service
+            authentication KMS auth used the mapped key.
+            Example: {"sandbox-auth-key":"sandbox","primary-auth-key":"primary"}
+            minimum_token_version: The minimum version of the authentication
+            token accepted.
+            maximum_token_version: The maximum version of the authentication
+            token accepted.
+            auth_token_max_lifetime: The maximum lifetime of an authentication
+            token in minutes.
+            token_cache_size: Size of the in-memory LRU cache for auth tokens.
             aws_creds: A dict of AccessKeyId, SecretAccessKey, SessionToken.
                 Useful if you wish to pass in assumed role credentials or MFA
                 credentials. Default: None
@@ -103,7 +111,7 @@ class KMSTokenValidator(object):
             self.extra_context = {}
         else:
             self.extra_context = extra_context
-        self.TOKENS = lru.LRUCache(4096)
+        self.TOKENS = lru.LRUCache(token_cache_size)
         self.KEY_METADATA = {}
         self._validate()
 
