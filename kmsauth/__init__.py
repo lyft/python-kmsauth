@@ -51,6 +51,7 @@ class KMSTokenValidator(object):
             extra_context=None,
             endpoint_url=None,
             token_cache_size=4096,
+            stats=None,
             ):
         """Create a KMSTokenValidator object.
 
@@ -79,6 +80,8 @@ class KMSTokenValidator(object):
                 credentials. Default: None
             endpoint_url: A URL to override the default endpoint used to access
                 the KMS service. Default: None
+            stats: A statsd client instance, to be used to track stats.
+                Default: None
         """
         self.auth_key = auth_key
         self.user_auth_key = user_auth_key
@@ -113,6 +116,7 @@ class KMSTokenValidator(object):
             self.extra_context = extra_context
         self.TOKENS = lru.LRUCache(token_cache_size)
         self.KEY_METADATA = {}
+        self.stats = stats
         self._validate()
 
     def _validate(self):
@@ -226,6 +230,8 @@ class KMSTokenValidator(object):
         if (version > self.maximum_token_version or
                 version < self.minimum_token_version):
             raise TokenValidationError('Unacceptable token version.')
+        if self.stats:
+            self.stats.incr('token_version_{0}'.format(version))
         try:
             token_key = '{0}{1}{2}{3}'.format(
                 hashlib.sha256(ensure_bytes(token)).hexdigest(),
@@ -245,10 +251,17 @@ class KMSTokenValidator(object):
                 context['from'] = _from
                 if version > 1:
                     context['user_type'] = user_type
-                data = self.kms_client.decrypt(
-                    CiphertextBlob=token,
-                    EncryptionContext=context
-                )
+                if self.stats:
+                    with self.stats.timer('kms_decrypt_token'):
+                        data = self.kms_client.decrypt(
+                            CiphertextBlob=token,
+                            EncryptionContext=context
+                        )
+                else:
+                    data = self.kms_client.decrypt(
+                        CiphertextBlob=token,
+                        EncryptionContext=context
+                    )
                 # Decrypt doesn't take KeyId as an argument. We need to verify
                 # the correct key was used to do the decryption.
                 # Annoyingly, the KeyId from the data is actually an arn.
