@@ -1,3 +1,7 @@
+## 0.6.0
+
+* kmsauth will use lru-dict library for its token cache, rather than a slower pure-python implementation, if lru-dict is available.
+
 ## 0.5.0
 
 * KMSTokenValidator now accepts a ``stats`` argument, which allows you to pass in an instance of a statsd client, so that the validator can track stats.

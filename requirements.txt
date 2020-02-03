@@ -2,7 +2,7 @@
 # for Python.
 # License: Apache2
 # Use: For KMS
-boto3==1.2.3
+boto3==1.11.9
 
 # The modular source code checker: pep8, pyflakes and co
 # License: MIT
@@ -12,7 +12,7 @@ flake8==2.3.0
 # Measures code coverage and emits coverage reports
 # Licence: BSD
 # Upstream url: https://pypi.python.org/pypi/coverage
-coverage==4.4.2
+coverage==4.5.4
 
 # tool to check your Python code against some of the style conventions
 # License: Expat License
