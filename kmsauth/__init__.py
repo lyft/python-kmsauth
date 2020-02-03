@@ -11,7 +11,12 @@ from botocore.exceptions import (ConnectionError,
                                  EndpointConnectionError)
 
 import kmsauth.services
-from kmsauth.utils import lru
+# Try to import the more efficient lru-dict, and fallback to slower pure-python
+# lru dict implementation if it's not available.
+try:
+    from lru import LRU
+except ImportError:
+    from kmsauth.utils.lru import LRUCache as LRU
 
 TOKEN_SKEW = 3
 TIME_FORMAT = "%Y%m%dT%H%M%SZ"
@@ -114,7 +119,7 @@ class KMSTokenValidator(object):
             self.extra_context = {}
         else:
             self.extra_context = extra_context
-        self.TOKENS = lru.LRUCache(token_cache_size)
+        self.TOKENS = LRU(token_cache_size)
         self.KEY_METADATA = {}
         self.stats = stats
         self._validate()
