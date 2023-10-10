@@ -3,8 +3,8 @@ import datetime
 import json
 
 import unittest
-from mock import patch
-from mock import MagicMock
+from unittest.mock import patch
+from unittest.mock import MagicMock
 
 import kmsauth
 from kmsauth.utils import lru
