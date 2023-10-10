@@ -8,14 +8,14 @@ on:
 jobs:
   build-and-publish-python-module:
     name: Build and publish python module to pypi
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v1
-      - name: Setup python 3.6
+      - name: Setup python 3.8
         uses: actions/setup-python@v1
         with:
-          python-version: 3.6
+          python-version: 3.8
       - name: Add wheel dependency
         run: pip install wheel
       - name: Generate dist

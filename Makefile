@@ -5,4 +5,6 @@ test: test_unit
 
 test_unit:
 	mkdir -p build
-	nosetests --with-coverage tests/unit
+	coverage run -m pytest tests/unit
+	coverage xml
+	coverage report
