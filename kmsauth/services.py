@@ -15,7 +15,9 @@ def get_boto_client(
         aws_secret_access_key=None,
         aws_session_token=None,
         endpoint_url=None,
-        max_pool_connections=None
+        max_pool_connections=None,
+        connect_timeout=None,
+        read_timeout=None,
         ):
     """Get a boto3 client connection."""
     cache_key = '{0}:{1}:{2}:{3}'.format(
@@ -41,7 +43,9 @@ def get_boto_client(
         client,
         endpoint_url=endpoint_url,
         config=botocore.config.Config(
-            max_pool_connections=max_pool_connections
+            max_pool_connections=max_pool_connections,
+            connect_timeout=connect_timeout,
+            read_timeout=read_timeout,
         )
     )
     return CLIENT_CACHE[cache_key]
