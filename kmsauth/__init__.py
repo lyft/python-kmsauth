@@ -57,9 +57,9 @@ class KMSTokenValidator(object):
             endpoint_url=None,
             token_cache_size=4096,
             stats=None,
-            max_pool_connections=100,
-            connect_timeout=1,
-            read_timeout=1,
+            max_pool_connections=None,
+            connect_timeout=None,
+            read_timeout=None,
             ):
         """Create a KMSTokenValidator object.
 
