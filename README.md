@@ -104,6 +104,18 @@ validator.decrypt_token(username, token)
 Note: 'to', 'from', and 'user_type' keys are not allowed to be set in
 extra_context.
 
+## Performance Tuning
+
+With the [boto defaults](https://botocore.amazonaws.com/v1/documentation/api/latest/reference/config.html), the AWS KMS client used in `KMSTokenValidator` may not be performant under higher loads, due to latency when communicating with AWS KMS. Try tuning these parameters below with the given starting points.
+
+```python
+...
+max_pool_connections=100,
+connect_timeout=1,
+read_timeout=1,
+...
+```
+
 ## Reporting security vulnerabilities
 
 If you've found a vulnerability or a potential vulnerability in kmsauth

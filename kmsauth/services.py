@@ -1,6 +1,7 @@
 """Module for accessing boto3 clients, resources and sessions."""
 
 import boto3
+import botocore
 import logging
 
 CLIENT_CACHE = {}
@@ -13,7 +14,10 @@ def get_boto_client(
         aws_access_key_id=None,
         aws_secret_access_key=None,
         aws_session_token=None,
-        endpoint_url=None
+        endpoint_url=None,
+        max_pool_connections=None,
+        connect_timeout=None,
+        read_timeout=None,
         ):
     """Get a boto3 client connection."""
     cache_key = '{0}:{1}:{2}:{3}'.format(
@@ -37,7 +41,12 @@ def get_boto_client(
 
     CLIENT_CACHE[cache_key] = session.client(
         client,
-        endpoint_url=endpoint_url
+        endpoint_url=endpoint_url,
+        config=botocore.config.Config(
+            max_pool_connections=max_pool_connections,
+            connect_timeout=connect_timeout,
+            read_timeout=read_timeout,
+        )
     )
     return CLIENT_CACHE[cache_key]
 

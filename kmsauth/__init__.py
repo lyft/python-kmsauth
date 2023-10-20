@@ -57,6 +57,9 @@ class KMSTokenValidator(object):
             endpoint_url=None,
             token_cache_size=4096,
             stats=None,
+            max_pool_connections=None,
+            connect_timeout=None,
+            read_timeout=None,
             ):
         """Create a KMSTokenValidator object.
 
@@ -107,13 +110,19 @@ class KMSTokenValidator(object):
                 aws_access_key_id=self.aws_creds['AccessKeyId'],
                 aws_secret_access_key=self.aws_creds['SecretAccessKey'],
                 aws_session_token=self.aws_creds['SessionToken'],
-                endpoint_url=endpoint_url
+                endpoint_url=endpoint_url,
+                max_pool_connections=max_pool_connections,
+                connect_timeout=connect_timeout,
+                read_timeout=read_timeout,
             )
         else:
             self.kms_client = kmsauth.services.get_boto_client(
                 'kms',
                 region=self.region,
-                endpoint_url=endpoint_url
+                endpoint_url=endpoint_url,
+                max_pool_connections=max_pool_connections,
+                connect_timeout=connect_timeout,
+                read_timeout=read_timeout,
             )
         if extra_context is None:
             self.extra_context = {}
