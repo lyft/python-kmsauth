@@ -19,7 +19,7 @@ def get_boto_client(
         connect_timeout=None,
         read_timeout=None,
         ):
-    """Get a boto3 client connection."""
+"""Get a boto3 client connection."""
     cache_key = '{0}:{1}:{2}:{3}'.format(
         client,
         region,
@@ -39,7 +39,7 @@ def get_boto_client(
         logging.error("Failed to get {0} client.".format(client))
         return None
 
-    # do not explicitly set any parmas as None
+    # do not explicitly set any params as None
     config_params = dict(
         max_pool_connections=max_pool_connections,
         connect_timeout=connect_timeout,
