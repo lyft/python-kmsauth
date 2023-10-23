@@ -39,14 +39,17 @@ def get_boto_client(
         logging.error("Failed to get {0} client.".format(client))
         return None
 
+    # do not explicitly set any parmas as None
+    config_params = dict(
+        max_pool_connections=max_pool_connections,
+        connect_timeout=connect_timeout,
+        read_timeout=read_timeout,
+    )
+    config_params = {k: v for (k, v) in config_params.items() if v is not None}
     CLIENT_CACHE[cache_key] = session.client(
         client,
         endpoint_url=endpoint_url,
-        config=botocore.config.Config(
-            max_pool_connections=max_pool_connections,
-            connect_timeout=connect_timeout,
-            read_timeout=read_timeout,
-        )
+        config=botocore.config.Config(**config_params)
     )
     return CLIENT_CACHE[cache_key]
 
