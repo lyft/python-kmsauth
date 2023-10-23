@@ -19,7 +19,7 @@ def get_boto_client(
         connect_timeout=None,
         read_timeout=None,
         ):
-"""Get a boto3 client connection."""
+    """Get a boto3 client connection."""
     cache_key = '{0}:{1}:{2}:{3}'.format(
         client,
         region,
