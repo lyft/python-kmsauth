@@ -129,6 +129,7 @@ class KMSTokenValidator(object):
         else:
             self.extra_context = extra_context
         self.TOKENS = LRU(token_cache_size)
+        self.token_cache_size = token_cache_size
         self.KEY_METADATA = {}
         self.stats = stats
         self._validate()
@@ -169,13 +170,17 @@ class KMSTokenValidator(object):
         )
 
     def _get_key_arn(self, key):
-        logging.debug(f'Getting key ARN for {key}')
         if key.startswith('arn:aws:kms:'):
             self.KEY_METADATA[key] = {
                 'KeyMetadata': {'Arn': key}
             }
         if key not in self.KEY_METADATA:
-            with self.stats.timer('kms_describe_key'):
+            if self.stats:
+                with self.stats.timer('kms_describe_key'):
+                    self.KEY_METADATA[key] = self.kms_client.describe_key(
+                        KeyId='{0}'.format(key)
+                    )
+            else:
                 self.KEY_METADATA[key] = self.kms_client.describe_key(
                     KeyId='{0}'.format(key)
                 )
@@ -261,10 +266,11 @@ class KMSTokenValidator(object):
         except Exception:
             raise TokenValidationError('Authentication error.')
         if token_key not in self.TOKENS:
-            self.stats.incr('token_cache.miss')
-            self.stats.gauge('token_cache.size_at_miss', len(self.TOKENS))
-            if len(self.TOKENS) >= self.token_cache_size:
-                self.stats.incr('token_cache.eviction')
+            if self.stats:
+                self.stats.incr('token_cache.miss')
+                self.stats.gauge('token_cache.size_at_miss', len(self.TOKENS))
+                if len(self.TOKENS) >= self.token_cache_size:
+                    self.stats.incr('token_cache.eviction')
 
             try:
                 token = base64.b64decode(token)
@@ -323,7 +329,8 @@ class KMSTokenValidator(object):
                     'Authentication error. General error.'
                 )
         else:
-            self.stats.incr('token_cache.hit')
+            if self.stats:
+                self.stats.incr('token_cache.hit')
             ret = self.TOKENS[token_key]
         now = datetime.datetime.utcnow()
         try:
@@ -353,8 +360,9 @@ class KMSTokenValidator(object):
             raise TokenValidationError(
                 'Authentication error. Invalid time validity for token.'
             )
-        self.stats.incr('token_cache.set')
-        self.stats.gauge('token_cache.size_at_set', len(self.TOKENS))
+        if self.stats:
+            self.stats.incr('token_cache.set')
+            self.stats.gauge('token_cache.size_at_set', len(self.TOKENS))
         self.TOKENS[token_key] = ret
         return self.TOKENS[token_key]
 
