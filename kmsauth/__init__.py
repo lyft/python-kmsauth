@@ -247,15 +247,16 @@ class KMSTokenValidator(object):
         '''
         Decrypt a token.
         '''
+        time_start = datetime.datetime.utcnow()
         version, user_type, _from = self._parse_username(username)
         if (version > self.maximum_token_version or
                 version < self.minimum_token_version):
             raise TokenValidationError('Unacceptable token version.')
         if self.stats:
-            self.stats.incr('token_version_{0}'.format(version))
-            self.stats.incr(f'cache_key.from.{_from}')
-            self.stats.incr(f'cache_key.to.{self.to_auth_context}')
-            self.stats.incr(f'cache_key.user_type.{user_type}')
+            self.stats.incr('token_version_{version}')
+            self.stats.incr(f'cache_key_from_{_from}')
+            self.stats.incr(f'cache_key_to_{self.to_auth_context}')
+            self.stats.incr(f'cache_key_user_type_{user_type}')
         try:
             token_key = '{0}{1}{2}{3}'.format(
                 hashlib.sha256(ensure_bytes(token)).hexdigest(),
@@ -267,10 +268,10 @@ class KMSTokenValidator(object):
             raise TokenValidationError('Authentication error.')
         if token_key not in self.TOKENS:
             if self.stats:
-                self.stats.incr('token_cache.miss')
-                self.stats.gauge('token_cache.size_at_miss', len(self.TOKENS))
+                self.stats.incr('token_cache_miss')
+                self.stats.gauge('token_cache_size_at_miss', len(self.TOKENS))
                 if len(self.TOKENS) >= self.token_cache_size:
-                    self.stats.incr('token_cache.eviction')
+                    self.stats.incr('token_cache_eviction')
 
             try:
                 token = base64.b64decode(token)
@@ -330,9 +331,12 @@ class KMSTokenValidator(object):
                 )
         else:
             if self.stats:
-                self.stats.incr('token_cache.hit')
+                self.stats.incr('token_cache_hit')
             ret = self.TOKENS[token_key]
+
         now = datetime.datetime.utcnow()
+        if self.stats:
+            self.stats.timing('decrypt_token_validation_duration', (now - time_start).total_seconds() * 1000)  # noqa: E501
         try:
             not_before = datetime.datetime.strptime(
                 ret['payload']['not_before'],
@@ -344,14 +348,14 @@ class KMSTokenValidator(object):
             )
         except Exception:
             logging.exception(
-                'Failed to get not_before and not_after from token payload.'
+                'Failed to get not_before and not_after from token payload.'  # noqa: E501
             )
             raise TokenValidationError(
                 'Authentication error. Missing validity.'
             )
         delta = (not_after - not_before).seconds / 60
         if delta > self.auth_token_max_lifetime:
-            logging.warning('Token used which exceeds max token lifetime.')
+            logging.warning('Token used which exceeds max token lifetime.')  # noqa: E501
             raise TokenValidationError(
                 'Authentication error. Token lifetime exceeded.'
             )
@@ -360,10 +364,13 @@ class KMSTokenValidator(object):
             raise TokenValidationError(
                 'Authentication error. Invalid time validity for token.'
             )
-        if self.stats:
-            self.stats.incr('token_cache.set')
-            self.stats.gauge('token_cache.size_at_set', len(self.TOKENS))
+
         self.TOKENS[token_key] = ret
+        duration = (datetime.datetime.utcnow() - now).total_seconds() * 1000
+        if self.stats:
+            self.stats.timing('decrypt_token_duration_post_validation', duration)  # noqa: E501
+            self.stats.incr('token_cache_set')
+            self.stats.gauge('token_cache_size_at_set', len(self.TOKENS))  # noqa: E501
         return self.TOKENS[token_key]
 
 
