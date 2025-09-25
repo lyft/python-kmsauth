@@ -253,14 +253,15 @@ class KMSTokenValidator(object):
                 version < self.minimum_token_version):
             raise TokenValidationError('Unacceptable token version.')
         if self.stats:
-            parse_duration = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
-            self.stats.timing('username_parse_duration', parse_duration)  # noqa: E501
+            # Checkpoint 1: After username parsing
+            checkpoint_1 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('checkpoint_1_after_parse', checkpoint_1)  # noqa: E501
+
             self.stats.incr('token_version_{version}')
             self.stats.incr(f'cache_key_from_{_from}')
             self.stats.incr(f'cache_key_to_{self.to_auth_context}')
             self.stats.incr(f'cache_key_user_type_{user_type}')
 
-        cache_key_gen_start = datetime.datetime.utcnow()
         try:
             token_key = '{0}{1}{2}{3}'.format(
                 hashlib.sha256(ensure_bytes(token)).hexdigest(),
@@ -270,15 +271,18 @@ class KMSTokenValidator(object):
             )
         except Exception:
             raise TokenValidationError('Authentication error.')
-        if self.stats:
-            cache_key_duration = (datetime.datetime.utcnow() - cache_key_gen_start).total_seconds() * 1000  # noqa: E501
-            self.stats.timing('cache_key_generation_duration', cache_key_duration)  # noqa: E501
 
-        cache_lookup_start = datetime.datetime.utcnow()
-        cache_miss = token_key not in self.TOKENS
         if self.stats:
-            cache_lookup_duration = (datetime.datetime.utcnow() - cache_lookup_start).total_seconds() * 1000  # noqa: E501
-            self.stats.timing('cache_lookup_duration', cache_lookup_duration)  # noqa: E501
+            # Checkpoint 2: After cache key generation
+            checkpoint_2 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('checkpoint_2_after_cache_key', checkpoint_2)  # noqa: E501
+
+        cache_miss = token_key not in self.TOKENS
+
+        if self.stats:
+            # Checkpoint 3: After cache lookup
+            checkpoint_3 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('checkpoint_3_after_cache_lookup', checkpoint_3)  # noqa: E501
 
         if cache_miss:
             if self.stats:
@@ -302,6 +306,9 @@ class KMSTokenValidator(object):
                             CiphertextBlob=token,
                             EncryptionContext=context
                         )
+                    # Checkpoint 4: After KMS decrypt
+                    checkpoint_4 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+                    self.stats.timing('checkpoint_4_after_kms_decrypt', checkpoint_4)  # noqa: E501
                 else:
                     data = self.kms_client.decrypt(
                         CiphertextBlob=token,
@@ -310,7 +317,6 @@ class KMSTokenValidator(object):
                 # Decrypt doesn't take KeyId as an argument. We need to verify
                 # the correct key was used to do the decryption.
                 # Annoyingly, the KeyId from the data is actually an arn.
-                key_validation_start = datetime.datetime.utcnow()
                 key_arn = data['KeyId']
                 if user_type == 'service':
                     if not self._valid_service_auth_key(key_arn):
@@ -327,15 +333,16 @@ class KMSTokenValidator(object):
                         'Authentication error. Unsupported user_type.'
                     )
                 if self.stats:
-                    key_validation_duration = (datetime.datetime.utcnow() - key_validation_start).total_seconds() * 1000  # noqa: E501
-                    self.stats.timing('key_validation_duration', key_validation_duration)  # noqa: E501
-                json_start = datetime.datetime.utcnow()
+                    # Checkpoint 5: After key validation
+                    checkpoint_5 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+                    self.stats.timing('checkpoint_5_after_key_validation', checkpoint_5)  # noqa: E501
                 plaintext = data['Plaintext']
                 payload = json.loads(plaintext)
                 key_alias = self._get_key_alias_from_cache(key_arn)
                 if self.stats:
-                    json_duration = (datetime.datetime.utcnow() - json_start).total_seconds() * 1000  # noqa: E501
-                    self.stats.timing('json_processing_duration', json_duration)
+                    # Checkpoint 6: After JSON processing
+                    checkpoint_6 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+                    self.stats.timing('checkpoint_6_after_json_processing', checkpoint_6)  # noqa: E501
                 ret = {'payload': payload, 'key_alias': key_alias}
             except TokenValidationError:
                 raise
@@ -352,13 +359,13 @@ class KMSTokenValidator(object):
                     'Authentication error. General error.'
                 )
         else:
-            cache_hit_start = datetime.datetime.utcnow()
             if self.stats:
                 self.stats.incr('token_cache_hit')
             ret = self.TOKENS[token_key]
             if self.stats:
-                cache_hit_duration = (datetime.datetime.utcnow() - cache_hit_start).total_seconds() * 1000  # noqa: E501
-                self.stats.timing('cache_hit_lookup_duration', cache_hit_duration)  # noqa: E501
+                # Checkpoint 7: After cache hit
+                checkpoint_7 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+                self.stats.timing('checkpoint_7_after_cache_hit', checkpoint_7)  # noqa: E501
 
         now = datetime.datetime.utcnow()
         if self.stats:
@@ -367,7 +374,6 @@ class KMSTokenValidator(object):
             self.stats.timing('pre_time_validation_duration', pre_time_validation_duration)  # noqa: E501
             # Original total validation duration metric
             self.stats.timing('decrypt_token_validation_duration', (now - time_start).total_seconds() * 1000)  # noqa: E501
-        time_validation_start = datetime.datetime.utcnow()
         try:
             not_before = datetime.datetime.strptime(
                 ret['payload']['not_before'],
@@ -396,8 +402,9 @@ class KMSTokenValidator(object):
                 'Authentication error. Invalid time validity for token.'
             )
         if self.stats:
-            time_validation_duration = (datetime.datetime.utcnow() - time_validation_start).total_seconds() * 1000  # noqa: E501
-            self.stats.timing('time_validation_duration', time_validation_duration)  # noqa: E501
+            # Checkpoint 8: After time validation
+            checkpoint_8 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('checkpoint_8_after_time_validation', checkpoint_8)  # noqa: E501
 
         cache_set_start = datetime.datetime.utcnow()
         self.TOKENS[token_key] = ret
