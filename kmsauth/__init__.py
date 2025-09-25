@@ -253,6 +253,7 @@ class KMSTokenValidator(object):
                 version < self.minimum_token_version):
             raise TokenValidationError('Unacceptable token version.')
         if self.stats:
+            self.stats.incr('token_version_{0}'.format(version))
             # Checkpoint 1: After username parsing
             checkpoint_1 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
             self.stats.timing('checkpoint_1_after_parse', checkpoint_1)  # noqa: E501
@@ -291,8 +292,17 @@ class KMSTokenValidator(object):
                 if len(self.TOKENS) >= self.token_cache_size:
                     self.stats.incr('token_cache_eviction')
 
+                # Checkpoint 3.5: After stats calls in cache miss
+                checkpoint_3_5 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+                self.stats.timing('checkpoint_3_5_after_cache_miss_stats', checkpoint_3_5)  # noqa: E501
+
             try:
                 token = base64.b64decode(token)
+                if self.stats:
+                    # Checkpoint 3.7: After base64 decode
+                    checkpoint_3_7 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+                    self.stats.timing('checkpoint_3_7_after_base64_decode', checkpoint_3_7)  # noqa: E501
+
                 # Ensure normal context fields override whatever is in
                 # extra_context.
                 context = copy.deepcopy(self.extra_context)
@@ -300,6 +310,11 @@ class KMSTokenValidator(object):
                 context['from'] = _from
                 if version > 1:
                     context['user_type'] = user_type
+
+                if self.stats:
+                    # Checkpoint 3.9: After context setup
+                    checkpoint_3_9 = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+                    self.stats.timing('checkpoint_3_9_after_context_setup', checkpoint_3_9)  # noqa: E501
                 if self.stats:
                     with self.stats.timer('kms_decrypt_token'):
                         data = self.kms_client.decrypt(
