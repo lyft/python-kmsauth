@@ -296,6 +296,7 @@ class KMSTokenValidator(object):
                 # Decrypt doesn't take KeyId as an argument. We need to verify
                 # the correct key was used to do the decryption.
                 # Annoyingly, the KeyId from the data is actually an arn.
+                key_validation_start = datetime.datetime.utcnow()
                 key_arn = data['KeyId']
                 if user_type == 'service':
                     if not self._valid_service_auth_key(key_arn):
@@ -311,9 +312,16 @@ class KMSTokenValidator(object):
                     raise TokenValidationError(
                         'Authentication error. Unsupported user_type.'
                     )
+                if self.stats:
+                    key_validation_duration = (datetime.datetime.utcnow() - key_validation_start).total_seconds() * 1000  # noqa: E501
+                    self.stats.timing('key_validation_duration', key_validation_duration)  # noqa: E501
+                json_start = datetime.datetime.utcnow()
                 plaintext = data['Plaintext']
                 payload = json.loads(plaintext)
                 key_alias = self._get_key_alias_from_cache(key_arn)
+                if self.stats:
+                    json_duration = (datetime.datetime.utcnow() - json_start).total_seconds() * 1000  # noqa: E501
+                    self.stats.timing('json_processing_duration', json_duration)
                 ret = {'payload': payload, 'key_alias': key_alias}
             except TokenValidationError:
                 raise
@@ -337,6 +345,7 @@ class KMSTokenValidator(object):
         now = datetime.datetime.utcnow()
         if self.stats:
             self.stats.timing('decrypt_token_validation_duration', (now - time_start).total_seconds() * 1000)  # noqa: E501
+        time_validation_start = datetime.datetime.utcnow()
         try:
             not_before = datetime.datetime.strptime(
                 ret['payload']['not_before'],
@@ -364,9 +373,12 @@ class KMSTokenValidator(object):
             raise TokenValidationError(
                 'Authentication error. Invalid time validity for token.'
             )
+        if self.stats:
+            time_validation_duration = (datetime.datetime.utcnow() - time_validation_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('time_validation_duration', time_validation_duration)  # noqa: E501
 
         self.TOKENS[token_key] = ret
-        duration = (datetime.datetime.utcnow() - now).total_seconds() * 1000
+        duration = (datetime.datetime.utcnow() - now).total_seconds() * 1000  # noqa: E501
         if self.stats:
             self.stats.timing('decrypt_token_duration_post_validation', duration)  # noqa: E501
             self.stats.incr('token_cache_set')
