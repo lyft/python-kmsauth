@@ -253,10 +253,14 @@ class KMSTokenValidator(object):
                 version < self.minimum_token_version):
             raise TokenValidationError('Unacceptable token version.')
         if self.stats:
+            parse_duration = (datetime.datetime.utcnow() - time_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('username_parse_duration', parse_duration)  # noqa: E501
             self.stats.incr('token_version_{version}')
             self.stats.incr(f'cache_key_from_{_from}')
             self.stats.incr(f'cache_key_to_{self.to_auth_context}')
             self.stats.incr(f'cache_key_user_type_{user_type}')
+
+        cache_key_gen_start = datetime.datetime.utcnow()
         try:
             token_key = '{0}{1}{2}{3}'.format(
                 hashlib.sha256(ensure_bytes(token)).hexdigest(),
@@ -266,7 +270,17 @@ class KMSTokenValidator(object):
             )
         except Exception:
             raise TokenValidationError('Authentication error.')
-        if token_key not in self.TOKENS:
+        if self.stats:
+            cache_key_duration = (datetime.datetime.utcnow() - cache_key_gen_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('cache_key_generation_duration', cache_key_duration)  # noqa: E501
+
+        cache_lookup_start = datetime.datetime.utcnow()
+        cache_miss = token_key not in self.TOKENS
+        if self.stats:
+            cache_lookup_duration = (datetime.datetime.utcnow() - cache_lookup_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('cache_lookup_duration', cache_lookup_duration)  # noqa: E501
+
+        if cache_miss:
             if self.stats:
                 self.stats.incr('token_cache_miss')
                 self.stats.gauge('token_cache_size_at_miss', len(self.TOKENS))
@@ -338,12 +352,20 @@ class KMSTokenValidator(object):
                     'Authentication error. General error.'
                 )
         else:
+            cache_hit_start = datetime.datetime.utcnow()
             if self.stats:
                 self.stats.incr('token_cache_hit')
             ret = self.TOKENS[token_key]
+            if self.stats:
+                cache_hit_duration = (datetime.datetime.utcnow() - cache_hit_start).total_seconds() * 1000  # noqa: E501
+                self.stats.timing('cache_hit_lookup_duration', cache_hit_duration)  # noqa: E501
 
         now = datetime.datetime.utcnow()
         if self.stats:
+            # Total time from start to this point (before time validation)
+            pre_time_validation_duration = (now - time_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('pre_time_validation_duration', pre_time_validation_duration)  # noqa: E501
+            # Original total validation duration metric
             self.stats.timing('decrypt_token_validation_duration', (now - time_start).total_seconds() * 1000)  # noqa: E501
         time_validation_start = datetime.datetime.utcnow()
         try:
@@ -377,7 +399,12 @@ class KMSTokenValidator(object):
             time_validation_duration = (datetime.datetime.utcnow() - time_validation_start).total_seconds() * 1000  # noqa: E501
             self.stats.timing('time_validation_duration', time_validation_duration)  # noqa: E501
 
+        cache_set_start = datetime.datetime.utcnow()
         self.TOKENS[token_key] = ret
+        if self.stats:
+            cache_set_duration = (datetime.datetime.utcnow() - cache_set_start).total_seconds() * 1000  # noqa: E501
+            self.stats.timing('cache_set_duration', cache_set_duration)  # noqa: E501
+
         duration = (datetime.datetime.utcnow() - now).total_seconds() * 1000  # noqa: E501
         if self.stats:
             self.stats.timing('decrypt_token_duration_post_validation', duration)  # noqa: E501
