@@ -27,4 +27,4 @@ pep8==1.5.7
 # Testing library
 # License: MIT
 # Upstream url: https://github.com/pytest-dev/pytest
-pytest==6.2.5
+pytest==9.0.3
